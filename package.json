@@ -1,0 +1,23 @@
+{
+    "name": "beatpass",
+    "version": "0.1.0",
+    "description": "Rhythm-encoded password proof of concept",
+    "type": "module",
+    "scripts": {
+        "start": "node server.js",
+        "format": "prettier --write \"**/*.{js,mjs,cjs,html,css,json}\"",
+        "lint": "eslint \"src/**/*.{js,mjs,cjs}\" \"*.{js,mjs,cjs}\""
+    },
+    "prettier": {
+        "printWidth": 130,
+        "tabWidth": 4,
+        "trailingComma": "none",
+        "semi": false
+    },
+    "devDependencies": {
+        "prettier": "^3.2.0",
+        "eslint": "^9.0.0",
+        "@eslint/js": "^9.0.0",
+        "globals": "^15.0.0"
+    }
+}

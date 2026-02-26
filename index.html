@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>BeatPass // Rhythm-Encoded Passwords</title>
+        <style>
+            /* ── Reset & Base ───────────────────────────────────────────────── */
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            :root {
+                --bg: #0a0a12;
+                --surface: #12121f;
+                --border: #2a2a4a;
+                --cyan: #00f0ff;
+                --magenta: #ff2df0;
+                --green: #39ff14;
+                --red: #ff3860;
+                --yellow: #ffe156;
+                --dim: #5a5a8a;
+                --text: #d0d0f0;
+                --font: "Fira Code", "JetBrains Mono", "SF Mono", "Cascadia Code", "Consolas", monospace;
+            }
+
+            html {
+                font-size: 15px;
+            }
+
+            body {
+                font-family: var(--font);
+                background: var(--bg);
+                color: var(--text);
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 1.5rem 1rem;
+                overflow-x: hidden;
+            }
+
+            /* Scanline overlay */
+            body::after {
+                content: "";
+                position: fixed;
+                inset: 0;
+                background: repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 0, 0, 0.08) 2px,
+                    rgba(0, 0, 0, 0.08) 4px
+                );
+                pointer-events: none;
+                z-index: 9999;
+            }
+
+            a {
+                color: var(--cyan);
+            }
+
+            /* ── Header ─────────────────────────────────────────────────────── */
+            .header {
+                text-align: center;
+                margin-bottom: 1.5rem;
+            }
+            .header h1 {
+                font-size: 2rem;
+                letter-spacing: 0.15em;
+                color: var(--cyan);
+                text-shadow:
+                    0 0 20px rgba(0, 240, 255, 0.5),
+                    0 0 60px rgba(0, 240, 255, 0.15);
+            }
+            .header .tagline {
+                font-size: 0.75rem;
+                color: var(--dim);
+                margin-top: 0.3rem;
+                letter-spacing: 0.25em;
+                text-transform: uppercase;
+            }
+
+            /* ── Mode label ─────────────────────────────────────────────────── */
+            .mode-label {
+                font-size: 0.85rem;
+                letter-spacing: 0.3em;
+                text-transform: uppercase;
+                padding: 0.25rem 1rem;
+                border: 1px solid;
+                margin-bottom: 1rem;
+            }
+            .mode-set {
+                color: var(--cyan);
+                border-color: var(--cyan);
+                text-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+            }
+            .mode-verify {
+                color: var(--magenta);
+                border-color: var(--magenta);
+                text-shadow: 0 0 8px rgba(255, 45, 240, 0.4);
+            }
+
+            /* ── Card ───────────────────────────────────────────────────────── */
+            .card {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                padding: 1.25rem;
+                width: 100%;
+                max-width: 680px;
+                margin-bottom: 1rem;
+                position: relative;
+            }
+            .card::before {
+                content: "";
+                position: absolute;
+                inset: -1px;
+                border-radius: 7px;
+                background: linear-gradient(135deg, rgba(0, 240, 255, 0.15), rgba(255, 45, 240, 0.15));
+                z-index: -1;
+            }
+
+            /* ── Timing Visualisation ───────────────────────────────────────── */
+            #timing-viz {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 2px;
+                min-height: 3.2rem;
+                padding: 0.5rem;
+                border: 1px dashed var(--border);
+                border-radius: 4px;
+                margin-bottom: 0.75rem;
+                overflow-x: auto;
+            }
+            .viz-placeholder {
+                color: var(--dim);
+                font-size: 0.8rem;
+            }
+            .viz-char {
+                background: var(--cyan);
+                color: var(--bg);
+                font-weight: 700;
+                padding: 0.15rem 0.4rem;
+                border-radius: 3px;
+                font-size: 1rem;
+                flex-shrink: 0;
+            }
+            .viz-gap {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.6rem;
+                color: var(--dim);
+                border-bottom: 1px dotted var(--magenta);
+                flex-shrink: 0;
+                padding: 0 4px;
+            }
+            .viz-raw {
+                color: var(--yellow);
+            }
+            .viz-ratio {
+                color: var(--magenta);
+                font-weight: 700;
+            }
+
+            /* ── Input field ────────────────────────────────────────────────── */
+            #input-field {
+                font-family: var(--font);
+                font-size: 1.8rem;
+                letter-spacing: 0.3em;
+                text-align: center;
+                padding: 0.6rem 1rem;
+                background: rgba(0, 0, 0, 0.4);
+                border: 1px solid var(--border);
+                border-radius: 4px;
+                color: var(--green);
+                text-shadow: 0 0 6px rgba(57, 255, 20, 0.4);
+                min-height: 3rem;
+                cursor: text;
+                user-select: none;
+            }
+
+            /* ── Status bar ─────────────────────────────────────────────────── */
+            #status-bar {
+                font-size: 0.75rem;
+                color: var(--dim);
+                text-align: center;
+                margin: 0.5rem 0;
+                min-height: 1.2rem;
+            }
+
+            /* ── Stored section ─────────────────────────────────────────────── */
+            .stored-section {
+                margin-bottom: 0.5rem;
+            }
+            .stored-section.hidden {
+                display: none;
+            }
+            .stored-label {
+                font-size: 0.65rem;
+                color: var(--dim);
+                text-transform: uppercase;
+                letter-spacing: 0.15em;
+                margin-bottom: 0.25rem;
+            }
+            #stored-plain {
+                font-size: 1.1rem;
+                color: var(--yellow);
+                letter-spacing: 0.15em;
+                margin-bottom: 0.3rem;
+            }
+            #stored-rhythm {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 2px;
+                margin-bottom: 0.3rem;
+            }
+            .rhy-char {
+                background: var(--magenta);
+                color: var(--bg);
+                font-weight: 700;
+                padding: 0.1rem 0.3rem;
+                border-radius: 2px;
+                font-size: 0.8rem;
+            }
+            .rhy-gap {
+                font-size: 0.55rem;
+                color: var(--magenta);
+                border-bottom: 1px dotted var(--dim);
+                padding: 0 3px;
+                text-align: center;
+            }
+            #stored-encoded {
+                font-size: 0.6rem;
+                color: var(--dim);
+                word-break: break-all;
+                background: rgba(0, 0, 0, 0.3);
+                padding: 0.3rem 0.5rem;
+                border-radius: 3px;
+                border: 1px solid var(--border);
+            }
+
+            /* ── Result panel ───────────────────────────────────────────────── */
+            #result-panel {
+                text-align: center;
+            }
+            #result-panel.hidden {
+                display: none;
+            }
+            .result-pass {
+                color: var(--green);
+                font-size: 1.3rem;
+                font-weight: 700;
+                letter-spacing: 0.2em;
+                text-shadow: 0 0 15px rgba(57, 255, 20, 0.6);
+            }
+            .result-fail {
+                color: var(--red);
+                font-size: 1.3rem;
+                font-weight: 700;
+                letter-spacing: 0.2em;
+                text-shadow: 0 0 15px rgba(255, 56, 96, 0.6);
+            }
+            #result-details {
+                margin-top: 0.75rem;
+                font-size: 0.75rem;
+            }
+
+            .detail-table {
+                margin: 0 auto;
+                border-collapse: collapse;
+                font-size: 0.75rem;
+            }
+            .detail-table th {
+                color: var(--dim);
+                font-weight: 400;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                padding: 0.2rem 0.6rem;
+                border-bottom: 1px solid var(--border);
+            }
+            .detail-table td {
+                padding: 0.2rem 0.6rem;
+                text-align: center;
+            }
+            .cell-pass td {
+                color: var(--green);
+            }
+            .cell-fail td {
+                color: var(--red);
+            }
+
+            /* ── Tolerance control ──────────────────────────────────────────── */
+            .tolerance-row {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+                margin-bottom: 0.5rem;
+                font-size: 0.7rem;
+                color: var(--dim);
+            }
+            .tolerance-row input[type="range"] {
+                accent-color: var(--cyan);
+                width: 140px;
+            }
+
+            /* ── Buttons ────────────────────────────────────────────────────── */
+            .btn-row {
+                display: flex;
+                justify-content: center;
+                gap: 0.75rem;
+                margin-top: 0.75rem;
+                flex-wrap: wrap;
+            }
+            .btn {
+                font-family: var(--font);
+                font-size: 0.75rem;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                padding: 0.4rem 1.2rem;
+                border: 1px solid;
+                border-radius: 4px;
+                background: transparent;
+                cursor: pointer;
+                transition:
+                    background 0.15s,
+                    box-shadow 0.15s;
+            }
+            .btn:active {
+                transform: translateY(1px);
+            }
+            .btn-cyan {
+                color: var(--cyan);
+                border-color: var(--cyan);
+            }
+            .btn-cyan:hover {
+                background: rgba(0, 240, 255, 0.1);
+                box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+            }
+            .btn-magenta {
+                color: var(--magenta);
+                border-color: var(--magenta);
+            }
+            .btn-magenta:hover {
+                background: rgba(255, 45, 240, 0.1);
+                box-shadow: 0 0 10px rgba(255, 45, 240, 0.3);
+            }
+            .btn-red {
+                color: var(--red);
+                border-color: var(--red);
+            }
+            .btn-red:hover {
+                background: rgba(255, 56, 96, 0.1);
+                box-shadow: 0 0 10px rgba(255, 56, 96, 0.3);
+            }
+            .btn.hidden {
+                display: none;
+            }
+
+            /* ── Keypad ─────────────────────────────────────────────────────── */
+            .keypad-wrapper {
+                width: 100%;
+                max-width: 680px;
+            }
+            .keypad-toggle-label {
+                display: block;
+                font-family: var(--font);
+                font-size: 0.7rem;
+                color: var(--cyan);
+                text-align: center;
+                cursor: pointer;
+                user-select: none;
+                padding: 0.45rem 1rem;
+                letter-spacing: 0.15em;
+                text-transform: uppercase;
+                border: 1px solid var(--cyan);
+                border-radius: 4px;
+                margin: 0 auto 0.5rem;
+                max-width: 260px;
+                transition:
+                    background 0.15s,
+                    box-shadow 0.15s;
+            }
+            .keypad-toggle-label:hover {
+                background: rgba(0, 240, 255, 0.1);
+                box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+            }
+            #keypad-toggle {
+                display: none;
+            }
+            /* Keypad visible by default; checkbox hides it */
+            #keypad-grid {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 6px;
+                padding: 0.5rem 0;
+            }
+            #keypad-toggle:checked ~ #keypad-grid {
+                display: none;
+            }
+            .keypad-row {
+                display: flex;
+                justify-content: center;
+                gap: 4px;
+            }
+            .key-btn {
+                font-family: var(--font);
+                font-size: 0.85rem;
+                width: 2.4rem;
+                height: 2.4rem;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+                background: var(--surface);
+                color: var(--text);
+                cursor: pointer;
+                transition:
+                    background 0.1s,
+                    border-color 0.1s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .key-btn:hover {
+                border-color: var(--cyan);
+                background: rgba(0, 240, 255, 0.08);
+            }
+            .key-btn:active {
+                background: rgba(0, 240, 255, 0.2);
+            }
+
+            /* ── About ──────────────────────────────────────────────────────── */
+            .about {
+                max-width: 680px;
+                font-size: 0.7rem;
+                color: var(--dim);
+                line-height: 1.6;
+                margin-top: 1rem;
+                border-top: 1px solid var(--border);
+                padding-top: 1rem;
+            }
+            .about h2 {
+                font-size: 0.8rem;
+                color: var(--cyan);
+                margin-bottom: 0.4rem;
+                letter-spacing: 0.1em;
+            }
+            .about code {
+                background: rgba(0, 240, 255, 0.08);
+                padding: 0.05rem 0.3rem;
+                border-radius: 2px;
+                color: var(--yellow);
+            }
+
+            /* ── Responsive ─────────────────────────────────────────────────── */
+            @media (max-width: 500px) {
+                .header h1 {
+                    font-size: 1.4rem;
+                }
+                #input-field {
+                    font-size: 1.3rem;
+                }
+                .key-btn {
+                    width: 2rem;
+                    height: 2rem;
+                    font-size: 0.75rem;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Header -->
+        <div class="header">
+            <h1>BEATPASS</h1>
+            <div class="tagline">rhythm-encoded password proof of concept</div>
+        </div>
+
+        <!-- Mode label -->
+        <div id="mode-label" class="mode-label mode-set">SET PASSRHYTHM</div>
+
+        <!-- Main card -->
+        <div class="card">
+            <!-- Timing visualisation -->
+            <div id="timing-viz">
+                <span class="viz-placeholder">start typing&hellip;</span>
+            </div>
+
+            <!-- Password input display -->
+            <div id="input-field">&nbsp;</div>
+
+            <!-- Status -->
+            <div id="status-bar">Type your rhythm password, then press Enter / OK to store it.</div>
+
+            <!-- Tolerance slider -->
+            <div class="tolerance-row">
+                <span>Tolerance:</span>
+                <input type="range" id="tolerance-slider" min="5" max="60" value="30" />
+                <span id="tolerance-value">30%</span>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="btn-row">
+                <button id="submit-btn" class="btn btn-cyan">Enter / OK</button>
+                <button id="share-btn" class="btn btn-magenta hidden">Share</button>
+                <button id="reset-btn" class="btn btn-red hidden">Reset</button>
+            </div>
+        </div>
+
+        <!-- Stored password section -->
+        <div id="stored-section" class="card stored-section hidden">
+            <div class="stored-label">Stored Passrhythm</div>
+            <div id="stored-plain"></div>
+            <div id="stored-rhythm"></div>
+            <div class="stored-label" style="margin-top: 0.5rem">Encoded (storage format)</div>
+            <div id="stored-encoded"></div>
+        </div>
+
+        <!-- Result panel -->
+        <div id="result-panel" class="card hidden">
+            <div id="result-text"></div>
+            <div id="result-details"></div>
+            <div class="btn-row" style="margin-top: 0.5rem">
+                <button class="btn btn-cyan" onclick="document.getElementById('result-panel').classList.add('hidden')">
+                    Dismiss
+                </button>
+            </div>
+        </div>
+
+        <!-- On-screen keypad -->
+        <div class="keypad-wrapper">
+            <input type="checkbox" id="keypad-toggle" />
+            <label for="keypad-toggle" class="keypad-toggle-label">hide / show keypad</label>
+            <div id="keypad-grid"></div>
+        </div>
+
+        <!-- About -->
+        <div class="about">
+            <h2>How it works</h2>
+            <p>
+                A <strong>BeatPass</strong> encodes not just <em>what</em> you type, but <em>how</em>
+                you type it. The delays between keystrokes are normalized into ratios relative to the shortest gap, making the
+                pattern tempo-independent. A seven-character password typed with the "Shave and a Haircut" rhythm carries
+                significantly more entropy than the same seven characters alone.
+            </p>
+            <p style="margin-top: 0.5rem">
+                <strong>Storage format:</strong> Each character is followed by a 3-digit ratio (the normalized timing &times; 10,
+                zero-padded). The last character stands alone.<br />
+                Example: <code>s010h023a010v010e031!010?</code>
+            </p>
+            <p style="margin-top: 0.5rem">
+                <strong>Sharing:</strong> The share button copies a URL with the encoded password in the fragment (hash). Give it
+                to a friend and see if they can type it with the right rhythm!
+            </p>
+        </div>
+
+        <script type="module">
+            import { init } from "./src/ui.js"
+            document.addEventListener("DOMContentLoaded", init)
+        </script>
+    </body>
+</html>
