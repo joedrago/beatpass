@@ -397,29 +397,29 @@
             #keypad-toggle {
                 display: none;
             }
-            /* Keypad visible by default; checkbox hides it */
+            /* Keypad hidden by default; checkbox shows it */
             #keypad-grid {
-                display: flex;
+                display: none;
                 flex-direction: column;
                 align-items: center;
-                gap: 6px;
-                padding: 0.5rem 0;
+                gap: 12px;
+                padding: 1rem 0;
             }
             #keypad-toggle:checked ~ #keypad-grid {
-                display: none;
+                display: flex;
             }
             .keypad-row {
                 display: flex;
                 justify-content: center;
-                gap: 4px;
+                gap: 10px;
             }
             .key-btn {
                 font-family: var(--font);
-                font-size: 0.85rem;
-                width: 2.4rem;
-                height: 2.4rem;
+                font-size: 1.4rem;
+                width: 4.5rem;
+                height: 4.5rem;
                 border: 1px solid var(--border);
-                border-radius: 4px;
+                border-radius: 50%;
                 background: var(--surface);
                 color: var(--text);
                 cursor: pointer;
@@ -429,6 +429,8 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                -webkit-tap-highlight-color: transparent;
+                touch-action: manipulation;
             }
             .key-btn:hover {
                 border-color: var(--cyan);
@@ -436,6 +438,7 @@
             }
             .key-btn:active {
                 background: rgba(0, 240, 255, 0.2);
+                border-color: var(--cyan);
             }
 
             /* ── About ──────────────────────────────────────────────────────── */
@@ -487,6 +490,13 @@
         <!-- Mode label -->
         <div id="mode-label" class="mode-label mode-set">SET PASSRHYTHM</div>
 
+        <!-- On-screen keypad -->
+        <div class="keypad-wrapper">
+            <input type="checkbox" id="keypad-toggle" />
+            <label for="keypad-toggle" class="keypad-toggle-label">show keypad</label>
+            <div id="keypad-grid"></div>
+        </div>
+
         <!-- Main card -->
         <div class="card">
             <!-- Timing visualisation -->
@@ -533,13 +543,6 @@
                     Dismiss
                 </button>
             </div>
-        </div>
-
-        <!-- On-screen keypad -->
-        <div class="keypad-wrapper">
-            <input type="checkbox" id="keypad-toggle" />
-            <label for="keypad-toggle" class="keypad-toggle-label">hide / show keypad</label>
-            <div id="keypad-grid"></div>
         </div>
 
         <!-- About -->

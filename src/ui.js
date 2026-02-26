@@ -74,24 +74,21 @@ export function init() {
 // ─── Keypad ─────────────────────────────────────────────────────────────────
 
 function buildKeypad() {
-    const rows = ["1234567890", "qwertyuiop", "asdfghjkl", "zxcvbnm"]
-    const specials = ["!", "@", "#", "$", ".", "BK", "OK"]
+    const rows = [
+        ["1", "2", "3"],
+        ["4", "5", "6"],
+        ["7", "8", "9"],
+        ["BK", "0", "OK"]
+    ]
 
     for (const row of rows) {
         const rowDiv = document.createElement("div")
         rowDiv.className = "keypad-row"
-        for (const ch of row) {
-            addKeypadButton(ch, ch, rowDiv)
+        for (const key of row) {
+            addKeypadButton(key, key, rowDiv)
         }
         $keypadGrid.appendChild(rowDiv)
     }
-
-    const rowDiv = document.createElement("div")
-    rowDiv.className = "keypad-row"
-    for (const sp of specials) {
-        addKeypadButton(sp, sp, rowDiv)
-    }
-    $keypadGrid.appendChild(rowDiv)
 }
 
 function addKeypadButton(label, value, parent) {
