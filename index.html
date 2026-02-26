@@ -408,16 +408,12 @@
                 display: flex;
                 justify-content: center;
                 gap: 10px;
-                width: 100%;
-                padding: 0 1rem;
-                box-sizing: border-box;
             }
             .key-btn {
                 font-family: var(--font);
                 font-size: clamp(1.2rem, 4vw, 1.6rem);
-                flex: 1;
-                max-width: 5.5rem;
-                aspect-ratio: 1;
+                width: min(24vw, 5.5rem);
+                height: min(24vw, 5.5rem);
                 border: 1px solid var(--border);
                 border-radius: 50%;
                 background: var(--surface);
